@@ -29,6 +29,8 @@
  */
 
 
+#include "ae.h"
+#include "zmalloc.h"
 #include <sys/select.h>
 #include <string.h>
 
