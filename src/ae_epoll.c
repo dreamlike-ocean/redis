@@ -29,6 +29,13 @@
  */
 
 
+#include "ae.h"
+#include "anet.h"
+#include "redisassert.h"
+#include "zmalloc.h"
+#include <asm-generic/errno-base.h>
+#include <errno.h>
+#include <string.h>
 #include <sys/epoll.h>
 
 typedef struct aeApiState {

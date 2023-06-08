@@ -31,6 +31,7 @@
 #ifndef ANET_H
 #define ANET_H
 
+#include <stdint.h>
 #include <sys/types.h>
 
 #define ANET_OK 0

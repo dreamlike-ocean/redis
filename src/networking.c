@@ -4219,6 +4219,7 @@ void initThreadedIO(void) {
     /* Spawn and initialize the I/O threads. */
     for (int i = 0; i < server.io_threads_num; i++) {
         /* Things we do for all the threads including the main thread. */
+        //绑定的client的connection
         io_threads_list[i] = listCreate();
         if (i == 0) continue; /* Thread 0 is the main thread. */
 

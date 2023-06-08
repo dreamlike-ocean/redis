@@ -37,6 +37,7 @@
 #include <sys/uio.h>
 
 #include "ae.h"
+#include "sds.h"
 
 #define CONN_INFO_LEN   32
 #define CONN_ADDR_STR_LEN 128 /* Similar to INET6_ADDRSTRLEN, hoping to handle other protocols. */

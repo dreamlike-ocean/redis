@@ -1257,6 +1257,18 @@ void cronUpdateMemoryStats(void) {
  * Everything directly called here will be called server.hz times per second,
  * so in order to throttle execution of things we want to do less frequently
  * a macro is used: run_with_period(milliseconds) { .... }
+ *这是我们的定时中断，每秒调用server.hz次。在这里，我们执行许多需要异步完成的操作。例如：
+
+主动过期键收集（在查找时也以惰性方式执行）。
+软件看门狗。
+更新一些统计信息。
+数据库哈希表的增量重哈希。
+触发BGSAVE / AOF重写，并处理已终止的子进程。
+不同类型的客户端超时。
+复制重新连接。
+更多…
+这里直接调用的所有内容都将每秒调用server.hz次，因此为了限制我们想要更少执行的操作的执行频率，使用了一个宏：run_with_period（毫秒）{
+ *
  */
 
 int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
@@ -1624,6 +1636,9 @@ extern int ProcessingEventsWhileBlocked;
  *
  * The most important is freeClientsInAsyncFreeQueue but we also
  * call some other low-risk functions. */
+ /**
+ 
+ */
 void beforeSleep(struct aeEventLoop *eventLoop) {
     UNUSED(eventLoop);
 
@@ -2435,6 +2450,7 @@ int createSocketAcceptHandler(connListener *sfd, aeFileProc *accept_handler) {
     int j;
 
     for (j = 0; j < sfd->count; j++) {
+        //服务端的poll出来的可读事件处理器 -> accept_handler
         if (aeCreateFileEvent(server.el, sfd->fd[j], AE_READABLE, accept_handler,sfd) == AE_ERR) {
             /* Rollback */
             for (j = j-1; j >= 0; j--) aeDeleteFileEvent(server.el, sfd->fd[j], AE_READABLE);
@@ -2633,11 +2649,12 @@ void initServer(void) {
         serverLog(LL_WARNING, "Failed to configure LOCALE for invalid locale name.");
         exit(1);
     }
-
+//预分配共享对象 比如错误信息的String等
     createSharedObjects();
     adjustOpenFilesLimit();
     const char *clk_msg = monotonicInit();
     serverLog(LL_NOTICE, "monotonic clock: %s", clk_msg);
+    //这里创建EventLoop
     server.el = aeCreateEventLoop(server.maxclients+CONFIG_FDSET_INCR);
     if (server.el == NULL) {
         serverLog(LL_WARNING,
@@ -2727,6 +2744,7 @@ void initServer(void) {
     /* Create the timer callback, this is our way to process many background
      * operations incrementally, like clients timeout, eviction of unaccessed
      * expired keys and so forth. */
+     //wake up的执行机制
     if (aeCreateTimeEvent(server.el, 1, serverCron, NULL, NULL) == AE_ERR) {
         serverPanic("Can't create event loop timers.");
         exit(1);
@@ -2734,6 +2752,7 @@ void initServer(void) {
 
     /* Register a readable event for the pipe used to awake the event loop
      * from module threads. */
+     //就是selector.waktUp()
     if (aeCreateFileEvent(server.el, server.module_pipe[0], AE_READABLE,
         modulePipeReadable,NULL) == AE_ERR) {
             serverPanic(
@@ -2774,6 +2793,7 @@ void initListeners(void) {
     int conn_index;
     connListener *listener;
     if (server.port != 0) {
+        //类似于策略方法
         conn_index = connectionIndexByType(CONN_TYPE_SOCKET);
         if (conn_index < 0)
             serverPanic("Failed finding connection listener of %s", CONN_TYPE_SOCKET);
@@ -7304,6 +7324,7 @@ int main(int argc, char **argv) {
         serverLog(LL_NOTICE, "Configuration loaded");
     }
 
+// 在这里初始化server参数 全局唯一的EventLoop
     initServer();
     if (background || server.pidfile) createPidFile();
     if (server.set_proc_title) redisSetProcTitle(NULL);
@@ -7317,10 +7338,14 @@ int main(int argc, char **argv) {
         moduleLoadFromQueue();
     }
     ACLLoadUsersAtStartup();
+    //初始化监听的fd 
     initListeners();
     if (server.cluster_enabled) {
         clusterInitListeners();
     }
+//初始化阻塞线程池和IO线程池 如果为单线程直接复用main线程
+//它这个IO线程池和我们常用那种模式不一样 这个IO线程池并不包含selector
+//这里直接初始化pthread然后启动 Runnable为 networking::IOThreadMain
     InitServerLast();
 
     if (!server.sentinel_mode) {

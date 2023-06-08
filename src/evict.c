@@ -118,7 +118,14 @@ unsigned long long estimateObjectIdleTime(robj *o) {
  * we populate it again. This time we'll be sure that the pool has at least
  * one key that can be evicted, if there is at least one key that can be
  * evicted in the whole database. */
+/**
+Redis使用一个常数内存的LRU算法近似。每当有一个键过期时，我们会抽样N个键（N非常小，通常在5左右）来填充一个最佳键池，以便从M个键（池大小由EVPOOL_SIZE定义）中驱逐。
 
+抽样的N个键如果比池中当前的键更好，就会被添加到要过期的好键池中（访问时间较旧的那个）。
+
+在池被填充后，我们将池中最好的键过期。但是请注意，当键被删除时，我们不会从池中删除它们，因此池可能包含不存在的键。
+
+当我们尝试驱逐一个键时，如果池中所有条目都不存在，则再次填充它。这次我们可以确定池中至少有一个可以驱逐的键，如果整个数据库中至少有一个可以驱逐的键。*/
 /* Create a new eviction pool. */
 void evictionPoolAlloc(void) {
     struct evictionPoolEntry *ep;

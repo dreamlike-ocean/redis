@@ -31,6 +31,7 @@
 #ifndef RAX_H
 #define RAX_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 /* Representation of a radix tree as implemented in this file, that contains
@@ -136,9 +137,9 @@ typedef struct rax {
     uint64_t numnodes;
 } rax;
 
-/* Stack data structure used by raxLowWalk() in order to, optionally, return
- * a list of parent nodes to the caller. The nodes do not have a "parent"
- * field for space concerns, so we use the auxiliary stack when needed. */
+
+ /**  raxLowWalk()使用栈数据结构，以便在需要时返回父节点列表。节点没有“parent”字段，因为空间问题，所以我们在需要时使用辅助栈。
+ */
 #define RAX_STACK_STATIC_ITEMS 32
 typedef struct raxStack {
     void **stack; /* Points to static_items or an heap allocated array. */

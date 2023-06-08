@@ -100,10 +100,14 @@ typedef struct aeEventLoop {
     int maxfd;   /* highest file descriptor currently registered */
     int setsize; /* max number of file descriptors tracked */
     long long timeEventNextId;
+    //类比到Epoll的Event上面 这个包含mask和读写任务
+    //这里是index为fd的int值 当前管理的全部fd 类比java的EpollSeletor实现中的fd -> selectKey
     aeFileEvent *events; /* Registered events */
+    //就是epoll_event数组类似的东西
     aeFiredEvent *fired; /* Fired events */
     aeTimeEvent *timeEventHead;
     int stop;
+    //linux 参考aeApiState这个结构体 塞入了epollFd和epoll_event
     void *apidata; /* This is used for polling API specific data */
     aeBeforeSleepProc *beforesleep;
     aeBeforeSleepProc *aftersleep;
